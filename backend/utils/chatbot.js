@@ -133,9 +133,9 @@ class GroqChatbot {
     }
   }
 
-  getSuggestedQuestions(language = 'en') {
-    return this.getSuggestedQuestionsFromPython(language);
-  }
+  async getSuggestedQuestions(language = 'en') {
+    return await this.getSuggestedQuestionsFromPython(language);
+}
   
   // Text-to-speech functionality
   async textToSpeech(text, language = 'en') {

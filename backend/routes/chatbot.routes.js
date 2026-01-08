@@ -1,155 +1,53 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-const Chat = require('../models/chat.model');
-const chatbot = require('../utils/chatbot');
+const { spawn } = require('child_process');
+const path = require('path');
 
-// Middleware to verify JWT token
-const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
-  
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    req.userId = decoded.id;
-    next();
-  } catch (error) {
-    return res.status(401).json({ message: 'Invalid token' });
-  }
-};
-
-// Get chatbot response
-router.post('/query', verifyToken, async (req, res) => {
-  try {
+// POST /api/chatbot/
+router.post('/', async (req, res) => {
     const { query, language } = req.body;
-    
-    if (!query) {
-      return res.status(400).json({ message: 'Query is required' });
-    }
-    
-    // Get response from chatbot with optional language parameter
-    const response = await chatbot.getResponse(query, language);
-    
-    // Save to chat history since user is authenticated (verifyToken middleware ensures this)
-    let chat = await Chat.findOne({ user: req.userId });
-    
-    if (!chat) {
-      // Create new chat if it doesn't exist
-      chat = new Chat({
-        user: req.userId,
-        messages: []
-      });
-    }
-    
-    // Add user message
-    chat.messages.push({
-      sender: 'user',
-      content: query,
-      language: response.language || language || 'en'
+    if (!query) return res.status(400).json({ error: 'Query is required' });
+
+    const pythonPath = path.join(__dirname, '..', 'python', 'chatbot_service.py');
+    const process = spawn('python', [pythonPath, JSON.stringify({ query, language })]);
+
+    let output = '';
+    let error = '';
+
+    process.stdout.on('data', (data) => output += data.toString());
+    process.stderr.on('data', (data) => error += data.toString());
+
+    process.on('close', (code) => {
+        if (code !== 0 || error) return res.status(500).json({ error: error.toString() });
+        try { res.json({ answer: JSON.parse(output) }); }
+        catch { res.status(500).json({ error: 'Invalid JSON from Python' }); }
     });
-    
-    // Add bot response
-    chat.messages.push({
-      sender: 'bot',
-      content: response.response,
-      language: response.language || language || 'en'
-    });
-    
-    chat.updatedAt = Date.now();
-    await chat.save();
-    
-    res.json(response);
-  } catch (error) {
-    console.error('Chatbot query error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
 });
 
-// Get suggested questions
-router.get('/suggested-questions', async (req, res) => {
-  try {
-    const { language } = req.query;
-    const suggestedQuestions = await chatbot.getSuggestedQuestions(language || 'en');
-    res.json({ suggestedQuestions });
-  } catch (error) {
-    console.error('Get suggested questions error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
+// GET /api/chatbot/suggested
+router.get('/suggested', (req, res) => {
+    res.json([
+        "How do I submit my life certificate?",
+        "Why is my pension payment delayed?",
+        "How do I update my bank details?",
+        "How can I track my grievance status?",
+        "What documents are required for pension grievance?"
+    ]);
 });
 
-// Get chat history
-router.get('/history', verifyToken, async (req, res) => {
-  try {
-    const chat = await Chat.findOne({ user: req.userId });
-    
-    if (!chat) {
-      return res.json({ messages: [] });
+// GET /api/chatbot/languages
+router.get('/languages', (req, res) => {
+    res.json({ en: "English", hi: "Hindi", mr: "Marathi" });
+});
+
+
+router.get('/suggested', async (req, res) => {
+    try {
+        const questions = await chatbot.getSuggestedQuestions();
+        res.json(questions);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to get suggested questions' });
     }
-    
-    res.json({ messages: chat.messages });
-  } catch (error) {
-    console.error('Get chat history error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
 });
 
-// Clear chat history
-router.delete('/history', verifyToken, async (req, res) => {
-  try {
-    await Chat.findOneAndDelete({ user: req.userId });
-    res.json({ message: 'Chat history cleared' });
-  } catch (error) {
-    console.error('Clear chat history error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Text-to-speech endpoint
-router.post('/text-to-speech', async (req, res) => {
-  try {
-    const { text, language = 'en' } = req.body;
-    
-    if (!text) {
-      return res.status(400).json({ message: 'Text is required' });
-    }
-    
-    // Get audio from chatbot
-    const result = await chatbot.textToSpeech(text, language);
-    
-    if (result.error) {
-      return res.status(500).json({ message: result.error });
-    }
-    
-    res.json({ audio: result.audio });
-  } catch (error) {
-    console.error('Text-to-speech error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Get supported languages
-router.get('/languages', async (req, res) => {
-  try {
-    const languages = chatbot.getSupportedLanguages();
-    res.json({ languages });
-  } catch (error) {
-    console.error('Get languages error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Get current language
-router.get('/current-language', verifyToken, async (req, res) => {
-  try {
-    const currentLanguage = chatbot.getCurrentLanguage();
-    res.json({ language: currentLanguage });
-  } catch (error) {
-    console.error('Get current language error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-module.exports = router;
+module.exports = router; 

@@ -7,7 +7,7 @@ CitizenVoice is an intelligent grievance redressal platform designed to streamli
 - **User Authentication**: Secure login and registration system with JWT and OAuth
 - **Grievance Filing**: Intuitive interface for submitting grievances with multi-modal support
 - **Grievance Tracking**: Real-time status updates and transparent process tracking
-- **Groq-Powered Chatbot**: Advanced conversational assistant using Mistral 7B model
+- **Azure-Powered Chatbot**: Advanced conversational assistant using Mistral 7B model
 - **Multi-modal Input**: Support for text, voice, and image inputs
 - **Location-based Routing**: Intelligent routing of grievances based on location
 - **Emotion Analysis**: Prioritization of urgent grievances through sentiment detection
@@ -69,7 +69,7 @@ MONGODB_URI=mongodb://localhost:27017/citizen-redressal
 JWT_SECRET=your-secret-key-change-this-in-production
 NODE_ENV=development
 CLIENT_URL=http://localhost:3000
-GROQ_API_KEY=your-groq-api-key
+AZURE_OPENAI_API_KEY=your-azure-api-key
 ```
 
 ### Running the Application
@@ -94,7 +94,7 @@ npm start
 2. **File a Grievance**: Submit your grievance with relevant details and attachments
 3. **Track Status**: Monitor the progress of your grievance in real-time
 4. **Receive Updates**: Get notifications when there are updates to your grievance
-5. **Use the Chatbot**: Get instant assistance from the Groq-powered chatbot with Mistral 7B model
+5. **Use the Chatbot**: Get instant assistance from the Azure-powered chatbot with Mistral 7B model
 
 ## Project Structure
 
@@ -108,8 +108,9 @@ citizen-redressal/
 │   ├── routes/
 │   ├── utils/
 │   ├── chatbot/
-│   │   ├── groq_api.py
-│   │   └── conversation_handler.py
+│   │   ├── azure_api.py
+│   │   └── rag_chatbot.py
+
 │   ├── server.js
 │   ├── requirements.txt
 │   └── package.json
@@ -146,17 +147,17 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Chatbot Features
 
-The CitizenVoice chatbot is powered by Groq's API using the Mistral 7B model, offering:
+The CitizenVoice chatbot is powered by **Azure OpenAI LLM** and **RAGChatbot**, offering:
 
-- **Contextual Conversations**: Maintains conversation history for more coherent interactions
-- **Suggested Questions**: Provides relevant question suggestions based on common grievance topics
-- **Modern UI**: Clean interface with Groq branding
-- **Fast Response Times**: Leveraging Groq's high-performance inference
-- **Multilingual Support**: Ability to understand and respond in multiple languages
+- **Contextual Conversations**: Maintains conversation history for coherent interactions
+- **Context-Aware Responses**: Uses RAG to retrieve relevant information from the grievance knowledge base
+- **Fast Response Times**: Powered by Azure OpenAI LLM APIs
+- **Multilingual Support**: Understands and responds in multiple languages
 
 ### Chatbot Technical Implementation
 
 - **Backend**: Python integration with Node.js
-- **API Integration**: Direct connection to Groq API
-- **Context Management**: Maintains conversation history for more natural interactions
-- **No Local Models**: Relies solely on the API for generating responses without using local CSV files or datasets
+- **Azure Integration**: Uses `AzureChatbot` class to interact with Azure OpenAI LLM
+- **Context Retrieval**: Uses `RAGChatbot` to fetch relevant context from the grievance knowledge base
+- **Context Management**: Maintains conversation history for coherent responses
+- **No Local Models**: Fully cloud-based, no local datasets required
